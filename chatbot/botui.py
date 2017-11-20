@@ -29,9 +29,13 @@ def bot_ui():
 
     with tf.Session() as sess:
         predictor = BotPredictor(sess, corpus_dir=corp_dir, knbase_dir=knbs_dir,
+<<<<<<< HEAD
                                  result_dir=res_dir, result_file='basic')
         # This command UI has a single chat session only
         session_id = predictor.session_data.add_session()
+=======
+                                 result_dir=res_dir, result_file='basic-37980')
+>>>>>>> math handler
 
         print("Welcome to Chat with ChatLearner!")
         print("Type exit and press enter to end the conversation.")

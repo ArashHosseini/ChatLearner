@@ -91,6 +91,52 @@ class FunctionData:
 
         weekday = cal.day_name[day_time.weekday()]
         return "{}, {:%B %d, %Y}".format(weekday, day_time)
+    
+    @staticmethod
+    def _math_operator(_operator, num1, num2):
+        if _operator == "plus":
+            return num1 + num2
+        if _operator == "minus":
+            return num1 - num2
+        if _operator == "multiply":
+            return num1 * num2
+        if _operator == "divide":
+            return num1 / num2
+        
+    @staticmethod
+    def math_handler(desc, ret_str, _operator, num1, num2):
+        if not str_int_map.keys():
+            res = FunctionData._math_operator(_operator, num1, num2)
+            return ret_str.format(desc = desc,
+                                   num1 = num1,
+                                   num2 = num2,
+                                   result = res)
+
+        if len(str_int_map.keys()) == 1:
+            _index, txt_int = list(str_int_map.items())[0]
+            if not _index:
+                res = FunctionData._math_operator(_operator, int(txt_int["int"]), num2)
+                return "{0} or {1}".format(ret_str.format(desc = desc,
+                                                           num1 = txt_int["txt"],
+                                                           num2 = num2,
+                                                           result = res),
+                                           FunctionData.int_to_en(res)
+                                           )
+                
+            res = FunctionData._math_operator(_operator, int(txt_int["int"]), num1)
+            return "{0} or {1}".format(ret_str.format(desc = desc,
+                                                       num1 = num1,
+                                                       num2 = txt_int["txt"],
+                                                       result = res),
+                                        FunctionData.int_to_en(res)
+                                       )
+        
+        num1, num2 = zip(str_int_map.items())
+        res = FunctionData._math_operator(_operator, num1[0][1]["int"], num2[0][1]["int"])
+        return ret_str.format(desc = desc,
+                              num1 = num1[0][1]["txt"],
+                              num2 = num2[0][1]["txt"],
+                              result = FunctionData.int_to_en(res))
 
     """
     # Rule 3: Stories and Jokes, and last topic
@@ -139,44 +185,36 @@ class FunctionData:
     # Rule 4: Arithmetic ops
     """
     @staticmethod
-    def get_number_plus(num1, num2):
-        res = num1 + num2
+    def get_number_plus(num1, num2):            
+        ret_str = "{desc}{num1} + {num2} is {result}"
         desc = random.choice(FunctionData.easy_list)
-        return "{}{} + {} = {}".format(desc, num1, num2, res)
+        return FunctionData.math_handler(desc, ret_str, "plus", num1, num2)
 
     @staticmethod
     def get_number_minus(num1, num2):
-        res = num1 - num2
+        ret_str = "{desc}{num1} - {num2} is {result}"
         desc = random.choice(FunctionData.easy_list)
-        return "{}{} - {} = {}".format(desc, num1, num2, res)
+        return FunctionData.math_handler(desc, ret_str, "minus", num1, num2)
 
     @staticmethod
     def get_number_multiply(num1, num2):
-        res = num1 * num2
+        ret_str = "{desc}{num1} * {num2} is {result}"
         if num1 > 100 and num2 > 100 and num1 % 2 == 1 and num2 % 2 == 1:
             desc = random.choice(FunctionData.hard_list)
+            return FunctionData.math_handler(desc, ret_str, "multiply", num1, num2)
         else:
             desc = random.choice(FunctionData.easy_list)
-        return "{}{} * {} = {}".format(desc, num1, num2, res)
+            return FunctionData.math_handler(desc, ret_str, "multiply", num1, num2)
+            
 
     @staticmethod
     def get_number_divide(num1, num2):
+        ret_str = "{desc}{num1} / {num2} is {result}"
+        desc = random.choice(FunctionData.easy_list)
         if num2 == 0:
             return "Sorry, but that does not make sense as the divisor cannot be zero."
         else:
-            res = num1 / num2
-            if isinstance(res, int):
-                if 50 < num1 != num2 > 50:
-                    desc = random.choice(FunctionData.hard_list)
-                else:
-                    desc = random.choice(FunctionData.easy_list)
-                return "{}{} / {} = {}".format(desc, num1, num2, res)
-            else:
-                if num1 > 20 and num2 > 20:
-                    desc = random.choice(FunctionData.hard_list)
-                else:
-                    desc = random.choice(FunctionData.easy_list)
-                return "{}{} / {} = {:.2f}".format(desc, num1, num2, res)
+            return FunctionData.math_handler(desc, ret_str, "divide", num1, num2)
 
     @staticmethod
     def check_arithmetic_pattern_and_replace(sentence):
@@ -192,6 +230,8 @@ class FunctionData:
 
     @staticmethod
     def contains_arithmetic_pattern(sentence):
+        global str_int_map 
+        str_int_map = {}
         numbers = [
             "zero", "one", "two", "three", "four", "five", "six", "seven",
             "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen",
@@ -223,12 +263,20 @@ class FunctionData:
             ind_list = [(m.start(0), m.end(0)) for m in re.finditer(pat_num, tmp_sentence)]
             num_list = []
             if len(ind_list) == 2:  # contains exactly two numbers
-                for start, end in ind_list:
+                for _index, (start, end) in enumerate(ind_list):
                     text = sentence[start:end]
-                    text_int = FunctionData.text2int(text)
-                    if text_int == -1:
-                        return False, [], []
-                    num_list.append(text_int)
+                    if text.isdigit():
+                        pass#print (text)
+                    try:
+                        int(text)
+                        text_int = FunctionData.text2int(text)
+                        if text_int == -1:
+                            return False, [], []
+                        num_list.append(text_int)
+                    except ValueError as e:
+                        str_int_map[_index] = {"int":FunctionData.text2int(text), "txt":text}
+                        num_list.append(text)
+                    
 
                 return True, ind_list, num_list
 
@@ -268,6 +316,50 @@ class FunctionData:
                 current = 0
 
         return result + current
+    
+    @staticmethod
+    def int_to_en(num):
+        d = { 0 : 'zero', 1 : 'one', 2 : 'two', 3 : 'three', 4 : 'four', 5 : 'five',
+              6 : 'six', 7 : 'seven', 8 : 'eight', 9 : 'nine', 10 : 'ten',
+              11 : 'eleven', 12 : 'twelve', 13 : 'thirteen', 14 : 'fourteen',
+              15 : 'fifteen', 16 : 'sixteen', 17 : 'seventeen', 18 : 'eighteen',
+              19 : 'nineteen', 20 : 'twenty',
+              30 : 'thirty', 40 : 'forty', 50 : 'fifty', 60 : 'sixty',
+              70 : 'seventy', 80 : 'eighty', 90 : 'ninety' }
+        k = 1000
+        m = k * 1000
+        b = m * 1000
+        t = b * 1000
+    
+        assert(0 <= num)
+    
+        if (num < 20):
+            return d[num]
+    
+        if (num < 100):
+            if num % 10 == 0: return d[num]
+            else: return d[num // 10 * 10] + '-' + d[num % 10]
+    
+        if (num < k):
+            if num % 100 == 0: return d[num // 100] + ' hundred'
+            else: return d[num // 100] + ' hundred and ' + int_to_en(num % 100)
+    
+        if (num < m):
+            if num % k == 0: return int_to_en(num // k) + ' thousand'
+            else: return int_to_en(num // k) + ' thousand, ' + int_to_en(num % k)
+    
+        if (num < b):
+            if (num % m) == 0: return int_to_en(num // m) + ' million'
+            else: return int_to_en(num // m) + ' million, ' + int_to_en(num % m)
+    
+        if (num < t):
+            if (num % b) == 0: return int_to_en(num // b) + ' billion'
+            else: return int_to_en(num // b) + ' billion, ' + int_to_en(num % b)
+    
+        if (num % t == 0): return int_to_en(num // t) + ' trillion'
+        else: return int_to_en(num // t) + ' trillion, ' + int_to_en(num % t)
+    
+        raise AssertionError('num is too large: %s' % str(num))
 
     """
     # Rule 5: User name, call me information, and last question and answer
@@ -497,6 +589,7 @@ def call_function(func_info, knowledge_base=None, chat_session=None, para_list=N
     else:
         func_name = func_info[:para1_index]
         if para2_index == -1:  # Only one parameter
+<<<<<<< HEAD
             func_para = func_info[para1_index+7:]
             if func_para == '_name_' and para_list is not None and len(para_list) >= 1:
                 return func_dict[func_name](para_list[0])
@@ -510,6 +603,16 @@ def call_function(func_info, knowledge_base=None, chat_session=None, para_list=N
             if para_list is not None and len(para_list) >= 2:
                 para1_val = para_list[0]
                 para2_val = para_list[1]
+=======
+            func_para = func_info[para1_index + 7:]
+            return func_dict[func_name](func_para)
+        else:
+            func_para1 = func_info[para1_index + 7:para2_index]
+            func_para2 = func_info[para2_index + 7:]
+            if para_list is not None:
+                num1_val = para_list[0]
+                num2_val = para_list[1]
+>>>>>>> math handler
 
                 if func_para1 == '_num1_' and func_para2 == '_num2_':
                     return func_dict[func_name](para1_val, para2_val)
